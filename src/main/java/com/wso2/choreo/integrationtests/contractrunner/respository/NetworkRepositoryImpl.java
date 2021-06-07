@@ -135,8 +135,8 @@ public class NetworkRepositoryImpl implements NetworkRepository {
                 .concat("\n===============\n"));
 
         JsonPath tokensJsonPath = tokensResponse.jsonPath();
-        SuiteConfig.putEnv("ACCESS_TOKEN", tokensJsonPath.getString("access_token"), EnvLevel.GLOBAL);
+        SuiteConfig.putEnv("BEARER_TOKEN", tokensJsonPath.getString("access_token"), EnvLevel.GLOBAL);
 
-        logger.debug("ACCESS_TOKEN: ".concat(tokensJsonPath.getString("access_token")));
+        logger.debug("BEARER_TOKEN: ".concat(tokensJsonPath.getString("access_token")));
     }
 }
