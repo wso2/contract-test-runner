@@ -1,6 +1,8 @@
 package com.wso2.choreo.integrationtests.contractrunner.controller;
 
 import com.google.gson.JsonObject;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.spi.json.GsonJsonProvider;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.EnvLevel;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.SuiteConfig;
 import com.wso2.choreo.integrationtests.contractrunner.domain.entity.CustomEnv;
@@ -9,6 +11,9 @@ import com.wso2.choreo.integrationtests.contractrunner.respository.FileRepositor
 import com.wso2.choreo.integrationtests.contractrunner.respository.NetworkRepository;
 import com.wso2.choreo.integrationtests.contractrunner.respository.NetworkRepositoryImpl;
 import com.wso2.choreo.integrationtests.contractrunner.usecase.*;
+import io.restassured.RestAssured;
+import io.restassured.config.ObjectMapperConfig;
+import io.restassured.mapper.ObjectMapperType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
@@ -110,9 +115,14 @@ public class ContractController {
                     .getList(jsonPathStr, CustomEnv.class);
             for (CustomEnv env : customEnvs) {
                 JsonPath responsePath = JsonPath.from(response.asInputStream());
-                SuiteConfig.putEnv(env.getKey(), responsePath.getString(env.getPath()), level);
+
+                Configuration conf = Configuration.builder().jsonProvider(new GsonJsonProvider()).build();
+                Object objectEnv = com.jayway.jsonpath.JsonPath.using(conf).parse(responsePath.prettify())
+                        .read((env.getPath().equals("")) ? "$" : "$.".concat(env.getPath()));
+
+                SuiteConfig.putEnv(env.getKey(), objectEnv.toString(), level);
                 logger.debug("SETTING ".concat(level.toString()).concat(" ENV: ").concat(env.getKey()).concat(": ")
-                        .concat(responsePath.getString(env.getPath())));
+                        .concat(objectEnv.toString()));
             }
         }
     }
