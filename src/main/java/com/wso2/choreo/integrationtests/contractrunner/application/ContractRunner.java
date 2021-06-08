@@ -1,5 +1,6 @@
 package com.wso2.choreo.integrationtests.contractrunner.application;
 
+import com.google.gson.Gson;
 import com.wso2.choreo.integrationtests.BasicContractTest;
 import com.wso2.choreo.integrationtests.contractrunner.ContractRunnable;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.EnvLevel;
@@ -81,17 +82,43 @@ public class ContractRunner implements ContractRunnable {
     }
 
     public void runTest(String contractNameOrDirectory, boolean skipTests, boolean skipPostConditions) {
+        if (SuiteConfig.getDataProvider() != null) {
+            JsonPath dataProviderPath = JsonPath.from(SuiteConfig.getDataProvider());
+            JsonPath arrayPath = JsonPath.from(SuiteConfig.getEnvs().get(dataProviderPath.getString("array")));
+            List<String> dataList;
+            if (dataProviderPath.get("filterPath") != null) {
+                dataList = arrayPath.getList(dataProviderPath
+                        .getString("filterPath"));
+            } else {
+                dataList = arrayPath.getList("");
+            }
+            dataList.forEach((Object data) -> {
+                String jsonDataString = new Gson().toJson(data, Map.class);
+                JsonPath dataPath = JsonPath.from(jsonDataString);
+                SuiteConfig.putEnv(dataProviderPath.getString("mapper.key"),
+                        dataPath.getString(dataProviderPath.getString("mapper.jsonPath")), EnvLevel.TEST);
+                logger.info("SETTING ".concat(EnvLevel.TEST.toString()).concat(" ENV: ")
+                        .concat(dataProviderPath.getString("mapper.key")).concat(" = ")
+                        .concat(dataPath.getString(dataProviderPath.getString("mapper.jsonPath"))));
+                runContracts(contractNameOrDirectory, skipTests, skipPostConditions);
+            });
+            return;
+        }
+        runContracts(contractNameOrDirectory, skipTests, skipPostConditions);
+    }
+
+    private void runContracts(String contractNameOrDirectory, boolean skipTests, boolean skipPostConditions) {
         String absolutePath = System.getenv("RESOURCES_PATH").concat("/contracts/")
                 .concat(contractNameOrDirectory);
         if (!(new File(absolutePath)).isDirectory()) {
             controller.runContract(contractNameOrDirectory, skipTests, skipPostConditions);
-            return;
-        }
-        String[] contractNames = controller.getJsonFilesInDirectory(absolutePath);
-        if (contractNames != null && contractNames.length != 0) {
-            runMultipleContracts(contractNames, skipTests, skipPostConditions, contractNameOrDirectory);
         } else {
-            logger.error("There are no contract files in the directory: ".concat(absolutePath));
+            String[] contractNames = controller.getJsonFilesInDirectory(absolutePath);
+            if (contractNames != null && contractNames.length != 0) {
+                runMultipleContracts(contractNames, skipTests, skipPostConditions, contractNameOrDirectory);
+            } else {
+                logger.error("There are no contract files in the directory: ".concat(absolutePath));
+            }
         }
     }
 

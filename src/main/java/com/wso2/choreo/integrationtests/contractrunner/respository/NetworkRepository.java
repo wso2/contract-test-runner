@@ -6,5 +6,6 @@ import io.restassured.response.Response;
 
 public interface NetworkRepository {
     Response getResponse(JsonPath contractJsonPath, String url, RestAssuredConfig config);
+
     void setAuthenticationAttributes(String authType);
 }

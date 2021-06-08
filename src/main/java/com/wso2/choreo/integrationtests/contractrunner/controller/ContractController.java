@@ -1,6 +1,5 @@
 package com.wso2.choreo.integrationtests.contractrunner.controller;
 
-import com.google.gson.JsonObject;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.spi.json.GsonJsonProvider;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.EnvLevel;
@@ -11,12 +10,8 @@ import com.wso2.choreo.integrationtests.contractrunner.respository.FileRepositor
 import com.wso2.choreo.integrationtests.contractrunner.respository.NetworkRepository;
 import com.wso2.choreo.integrationtests.contractrunner.respository.NetworkRepositoryImpl;
 import com.wso2.choreo.integrationtests.contractrunner.usecase.*;
-import io.restassured.RestAssured;
-import io.restassured.config.ObjectMapperConfig;
-import io.restassured.mapper.ObjectMapperType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
-import io.restassured.specification.RequestSpecification;
 import org.apache.commons.lang3.text.StrSubstitutor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -73,10 +68,17 @@ public class ContractController {
                     .getList("beforeSuiteConfigs.contracts").toArray(new String[0]));
             SuiteConfig.setAfterSuiteContracts(configJsonPath
                     .getList("afterSuiteConfigs.contracts").toArray(new String[0]));
+
+            if (configJsonPath.get("dataProvider") != null) {
+                Configuration conf = Configuration.builder().jsonProvider(new GsonJsonProvider()).build();
+                Object objectDataProvider = com.jayway.jsonpath.JsonPath.using(conf).parse(configJsonPath.prettify())
+                        .read("$.dataProvider");
+                SuiteConfig.setDataProvider(objectDataProvider.toString());
+            }
         }
     }
 
-    public void setAuthenticationAttributes(String authType){
+    public void setAuthenticationAttributes(String authType) {
         networkRepository.setAuthenticationAttributes(authType);
     }
 
@@ -90,7 +92,7 @@ public class ContractController {
         assertStatusCodeUseCase.execute();
 
         if (contractJsonPath.get("assertions") == null) {
-            logger.debug("No assertions in this contract: ".concat(contractJsonPath.getString("name")));
+            logger.info("No assertions in this contract: ".concat(contractJsonPath.getString("name")));
             return;
         }
 
@@ -115,15 +117,23 @@ public class ContractController {
                     .getList(jsonPathStr, CustomEnv.class);
             for (CustomEnv env : customEnvs) {
                 JsonPath responsePath = JsonPath.from(response.asInputStream());
-
                 Configuration conf = Configuration.builder().jsonProvider(new GsonJsonProvider()).build();
                 Object objectEnv = com.jayway.jsonpath.JsonPath.using(conf).parse(responsePath.prettify())
                         .read((env.getPath().equals("")) ? "$" : "$.".concat(env.getPath()));
-
-                SuiteConfig.putEnv(env.getKey(), objectEnv.toString(), level);
+                SuiteConfig.putEnv(env.getKey(), removeQuotes(objectEnv.toString()), level);
                 logger.debug("SETTING ".concat(level.toString()).concat(" ENV: ").concat(env.getKey()).concat(": ")
                         .concat(objectEnv.toString()));
             }
         }
+    }
+
+    private String removeQuotes(String str) {
+        if (str.startsWith("\"")) {
+            str = str.substring(1);
+        }
+        if (str.endsWith("\"")) {
+            str = str.substring(0, str.length() - 1);
+        }
+        return str;
     }
 }

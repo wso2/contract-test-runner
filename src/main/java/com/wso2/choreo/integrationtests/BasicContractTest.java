@@ -21,8 +21,10 @@ public class BasicContractTest {
 
     @Test
     @Parameters({"contractNameOrDirectory", "skipTests", "skipPostConditions"})
-    public void basicContractTest(String contractNameOrDirectory, @Optional("false") String skipTests, @Optional("false") String skipPostConditions) {
-        runner.runTest(contractNameOrDirectory, Boolean.parseBoolean(skipTests), Boolean.parseBoolean(skipPostConditions));
+    public void basicContractTest(String contractNameOrDirectory, @Optional("false") String skipTests,
+                                  @Optional("false") String skipPostConditions) {
+        runner.runTest(contractNameOrDirectory, Boolean.parseBoolean(skipTests),
+                Boolean.parseBoolean(skipPostConditions));
     }
 
     @AfterSuite
