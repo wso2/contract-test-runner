@@ -68,6 +68,7 @@ public class ContractController {
                     .getList("beforeSuiteConfigs.contracts").toArray(new String[0]));
             SuiteConfig.setAfterSuiteContracts(configJsonPath
                     .getList("afterSuiteConfigs.contracts").toArray(new String[0]));
+            SuiteConfig.setDataProvider(null);
 
             if (configJsonPath.get("dataProvider") != null) {
                 Configuration conf = Configuration.builder().jsonProvider(new GsonJsonProvider()).build();
