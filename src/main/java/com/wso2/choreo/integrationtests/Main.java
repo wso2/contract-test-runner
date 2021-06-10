@@ -1,7 +1,11 @@
 package com.wso2.choreo.integrationtests;
 
 import com.wso2.choreo.integrationtests.contractrunner.application.ContractRunner;
+import com.wso2.choreo.integrationtests.contractrunner.configuration.Constant;
+import com.wso2.choreo.integrationtests.contractrunner.controller.ContractController;
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.logging.log4j.core.config.builder.api.AppenderComponentBuilder;
@@ -11,10 +15,15 @@ import org.apache.logging.log4j.core.config.builder.api.RootLoggerComponentBuild
 import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration;
 
 public class Main {
+    private static final Logger logger = LogManager.getLogger(Main.class);
 
     public static void main(String[] args) {
+        if (System.getenv(Constant.RESOURCES_PATH) == null) {
+            logger.error("RESOURCES_PATH has not been set");
+            return;
+        }
         prepareLoggers();
-        (new ContractRunner()).initTestNG(System.getenv("RESOURCES_PATH"));
+        (new ContractRunner()).initTestNG(System.getenv(Constant.RESOURCES_PATH));
     }
 
     public static void prepareLoggers() {
@@ -30,8 +39,8 @@ public class Main {
 
         AppenderComponentBuilder fileDebugAppender
                 = builder.newAppender("debug_log", "File");
-        fileDebugAppender.addAttribute("fileName", System.getenv("RESOURCES_PATH")
-                .concat("/test-outputs/logs.log"));
+        fileDebugAppender.addAttribute("fileName", System.getenv(Constant.RESOURCES_PATH)
+                .concat(Constant.TESTS_OUTPUT_PATH));
         fileDebugAppender.add(builder.newFilter("ThresholdFilter", Filter.Result.ACCEPT, Filter.Result.DENY).
                 addAttribute("level", Level.DEBUG));
         fileDebugAppender.add(builder.newLayout("PatternLayout").

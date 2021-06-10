@@ -1,6 +1,7 @@
 package com.wso2.choreo.integrationtests.contractrunner.respository;
 
 import com.google.gson.JsonObject;
+import com.wso2.choreo.integrationtests.contractrunner.configuration.Constant;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.EnvLevel;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.SuiteConfig;
 import com.wso2.choreo.integrationtests.contractrunner.domain.entity.AuthType;
@@ -32,7 +33,7 @@ public class NetworkRepositoryImpl implements NetworkRepository {
 
     @Override
     public Response getResponse(JsonPath contractJsonPath, String url, RestAssuredConfig config) {
-        String method = contractJsonPath
+        var method = contractJsonPath
                 .getString("request.method");
         RequestSpecification specs = getRequestSpec(contractJsonPath, config);
         Response response;
@@ -52,11 +53,8 @@ public class NetworkRepositoryImpl implements NetworkRepository {
             default:
                 response = given().spec(specs).get(url);
         }
-        logger.debug("\n===============\n".concat("RESPONSE:\nurl: ").concat(method).concat(" ")
-                .concat(url)
-                .concat("\n").concat("body: \n")
-                .concat((!response.body().asString().equals("")) ? response.asString() : "")
-                .concat("\n===============\n"));
+        logger.debug(Constant.RESPONSE_LOG, method, url,
+                ((!response.body().asString().equals("")) ? response.asString() : ""));
         return response;
     }
 
@@ -74,8 +72,8 @@ public class NetworkRepositoryImpl implements NetworkRepository {
 
     private void setIDPAuthenticationAttributes() {
         RequestSpecification specs = given()
-                .header("Authorization", SuiteConfig.getEnvs().get("IDP_AUTH_HEADER"))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header(Constant.AUTHORIZATION_HEADER, SuiteConfig.getEnvs().get("IDP_AUTH_HEADER"))
+                .header(Constant.CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .formParam("grant_type", "password")
                 .formParam("scope", "openid")
                 .formParam("username", SuiteConfig.getEnvs().get("IDP_USERNAME"))
@@ -83,7 +81,7 @@ public class NetworkRepositoryImpl implements NetworkRepository {
 
         specs.config(SuiteConfig.getRestAssuredConfig()).log().all();
 
-        Response response = given().spec(specs).post(SuiteConfig.getEnvs().get("IDP_URL"));
+        var response = given().spec(specs).post(SuiteConfig.getEnvs().get("IDP_URL"));
 
         String[] fragments = response.body().jsonPath().getString("id_token").split("\\.");
         String token = fragments[0].concat(".").concat(fragments[1]);
@@ -92,51 +90,49 @@ public class NetworkRepositoryImpl implements NetworkRepository {
         SuiteConfig.putEnv("BEARER_TOKEN", token, EnvLevel.GLOBAL);
         SuiteConfig.putEnv("CWATF", cwatf, EnvLevel.GLOBAL);
 
-        logger.debug("BEARER_TOKEN: ".concat(token));
-        logger.debug("CWATF: ".concat(cwatf));
+        logger.debug("BEARER_TOKEN: {}", token);
+        logger.debug("CWATF: {}", cwatf);
     }
 
     private void setAPIMAuthenticationAttributes() {
-        JsonObject clientRegistrationParams = new JsonObject();
+        var clientRegistrationParams = new JsonObject();
         clientRegistrationParams.addProperty("clientName", "contract_test_client");
         clientRegistrationParams.addProperty("grantType", "client_credentials password");
         clientRegistrationParams.addProperty("owner", SuiteConfig.getEnvs().get("APIM_CLIENT_REG_OWNER"));
         clientRegistrationParams.addProperty("saasApp", true);
+
         RequestSpecification clientRegistrationSpecs = given()
-                .header("Authorization", SuiteConfig.getEnvs().get("APIM_CLIENT_REG_AUTH_HEADER"))
-                .header("Content-Type", "application/json")
+                .header(Constant.AUTHORIZATION_HEADER, SuiteConfig.getEnvs().get("APIM_CLIENT_REG_AUTH_HEADER"))
+                .header(Constant.CONTENT_TYPE, "application/json")
                 .body(clientRegistrationParams);
         clientRegistrationSpecs.config(SuiteConfig.getRestAssuredConfig()).log().all();
-        Response clientRegistrationResponse = given().spec(clientRegistrationSpecs).post(SuiteConfig.getEnvs().get("APIM_CLIENT_REG_URL"));
-        logger.debug("\n===============\n".concat("RESPONSE:\nurl: ").concat("POST").concat(" ")
-                .concat(SuiteConfig.getEnvs().get("APIM_CLIENT_REG_URL"))
-                .concat("\n").concat("body: \n")
-                .concat((!clientRegistrationResponse.body().asString().equals("")) ? clientRegistrationResponse.asString() : "")
-                .concat("\n===============\n"));
+        var clientRegistrationResponse = given().spec(clientRegistrationSpecs)
+                .post(SuiteConfig.getEnvs().get("APIM_CLIENT_REG_URL"));
 
-        JsonPath clientDetailsJsonPath = clientRegistrationResponse.jsonPath();
-        String base64Token = Base64.getEncoder().encodeToString((clientDetailsJsonPath.getString("clientId")
+        logger.debug(Constant.RESPONSE_LOG, "POST", SuiteConfig.getEnvs().get("APIM_CLIENT_REG_URL"),
+                ((!clientRegistrationResponse.body().asString().equals(""))
+                        ? clientRegistrationResponse.asString() : ""));
+
+        var clientDetailsJsonPath = clientRegistrationResponse.jsonPath();
+        var base64Token = Base64.getEncoder().encodeToString((clientDetailsJsonPath.getString("clientId")
                 .concat(":").concat(clientDetailsJsonPath.getString("clientSecret"))).getBytes());
+
         RequestSpecification specs = given()
-                .header("Authorization", "Basic ".concat(base64Token))
-                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header(Constant.AUTHORIZATION_HEADER, "Basic ".concat(base64Token))
+                .header(Constant.CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .formParam("grant_type", "password")
                 .formParam("scope", SuiteConfig.getEnvs().get("APIM_USER_SCOPES"))
                 .formParam("username", SuiteConfig.getEnvs().get("APIM_USERNAME"))
                 .formParam("password", SuiteConfig.getEnvs().get("APIM_PASSWORD"));
-
-        logger.debug("base64 token: ".concat(base64Token));
+        logger.debug("base64 token: {}", base64Token);
         specs.config(SuiteConfig.getRestAssuredConfig()).log().all();
-        Response tokensResponse = given().spec(specs).post(SuiteConfig.getEnvs().get("APIM_TOKEN_ENDPOINT"));
-        logger.debug("\n===============\n".concat("RESPONSE:\nurl: ").concat("POST").concat(" ")
-                .concat(SuiteConfig.getEnvs().get("APIM_TOKEN_ENDPOINT"))
-                .concat("\n").concat("body: \n")
-                .concat((!tokensResponse.body().asString().equals("")) ? tokensResponse.asString() : "")
-                .concat("\n===============\n"));
+        var tokensResponse = given().spec(specs).post(SuiteConfig.getEnvs().get("APIM_TOKEN_ENDPOINT"));
 
-        JsonPath tokensJsonPath = tokensResponse.jsonPath();
+        logger.debug(Constant.RESPONSE_LOG, "POST", SuiteConfig.getEnvs().get("APIM_TOKEN_ENDPOINT"),
+                ((!tokensResponse.body().asString().equals("")) ? tokensResponse.asString() : ""));
+
+        var tokensJsonPath = tokensResponse.jsonPath();
         SuiteConfig.putEnv("BEARER_TOKEN", tokensJsonPath.getString("access_token"), EnvLevel.GLOBAL);
-
-        logger.debug("BEARER_TOKEN: ".concat(tokensJsonPath.getString("access_token")));
+        logger.debug("BEARER_TOKEN: {}", tokensJsonPath.getString("access_token"));
     }
 }

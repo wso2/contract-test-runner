@@ -15,7 +15,7 @@ public class FileRepositoryImpl implements FileRepository {
 
     @Override
     public String getFileContent(String filePath) {
-        File mainFile = new File(filePath);
+        var mainFile = new File(filePath);
         try (InputStream inputStream = new FileInputStream(mainFile)) {
             return IOUtils.toString(inputStream, StandardCharsets.UTF_8.name());
         } catch (IOException e) {

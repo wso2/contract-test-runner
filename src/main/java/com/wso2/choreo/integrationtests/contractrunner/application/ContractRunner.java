@@ -3,6 +3,7 @@ package com.wso2.choreo.integrationtests.contractrunner.application;
 import com.google.gson.Gson;
 import com.wso2.choreo.integrationtests.BasicContractTest;
 import com.wso2.choreo.integrationtests.contractrunner.ContractRunnable;
+import com.wso2.choreo.integrationtests.contractrunner.configuration.Constant;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.EnvLevel;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.SuiteConfig;
 import com.wso2.choreo.integrationtests.contractrunner.controller.ContractController;
@@ -22,7 +23,6 @@ import org.testng.xml.XmlSuite;
 import org.testng.xml.XmlTest;
 
 import java.io.File;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,10 +44,10 @@ public class ContractRunner implements ContractRunnable {
         String[] configNames = controller.getJsonFilesInDirectory(configDirectory);
         if (configNames != null) {
             List<XmlSuite> suites = new ArrayList<>();
-            XmlSuite parentSuite = new XmlSuite();
+            var parentSuite = new XmlSuite();
             parentSuite.setName("all suites");
             for (String configName : configNames) {
-                JsonPath configJsonPath = controller.getJsonPathFromFile(configDirectory.concat("/"
+                var configJsonPath = controller.getJsonPathFromFile(configDirectory.concat("/"
                         .concat(configName)));
                 String[] contractNamesList = configJsonPath
                         .getList("tests")
@@ -59,7 +59,7 @@ public class ContractRunner implements ContractRunnable {
             suites.add(parentSuite);
             runTestng(suites);
         } else {
-            logger.error("There are no config files in the directory: ".concat(configDirectory));
+            logger.error("There are no config files in the directory: {}", configDirectory);
         }
     }
 
@@ -77,14 +77,14 @@ public class ContractRunner implements ContractRunnable {
         SuiteConfig.initializeTestEnvs();
         if (envFile != null) {
             SuiteConfig.putEnvs(getEnvsMap(System
-                    .getenv("RESOURCES_PATH").concat("/").concat(envFile)), EnvLevel.TEST);
+                    .getenv(Constant.RESOURCES_PATH).concat("/").concat(envFile)), EnvLevel.TEST);
         }
     }
 
     public void runTest(String contractNameOrDirectory, boolean skipTests, boolean skipPostConditions) {
-        if (SuiteConfig.getDataProvider() != null) {
-            JsonPath dataProviderPath = JsonPath.from(SuiteConfig.getDataProvider());
-            JsonPath arrayPath = JsonPath.from(SuiteConfig.getEnvs().get(dataProviderPath.getString("array")));
+        if (SuiteConfig.getEnvs().containsKey(Constant.SUITE_DATA_PROVIDER)) {
+            var dataProviderPath = JsonPath.from(SuiteConfig.getDataProvider());
+            var arrayPath = JsonPath.from(SuiteConfig.getEnvs().get(dataProviderPath.getString("array")));
             List<String> dataList;
             if (dataProviderPath.get("filterPath") != null) {
                 dataList = arrayPath.getList(dataProviderPath
@@ -93,8 +93,8 @@ public class ContractRunner implements ContractRunnable {
                 dataList = arrayPath.getList("");
             }
             dataList.forEach((Object data) -> {
-                String jsonDataString = new Gson().toJson(data, Map.class);
-                JsonPath dataPath = JsonPath.from(jsonDataString);
+                var jsonDataString = new Gson().toJson(data, Map.class);
+                var dataPath = JsonPath.from(jsonDataString);
                 SuiteConfig.putEnv(dataProviderPath.getString("mapper.key"),
                         dataPath.getString(dataProviderPath.getString("mapper.jsonPath")), EnvLevel.TEST);
                 logger.info("SETTING ".concat(EnvLevel.TEST.toString()).concat(" ENV: ")
@@ -108,7 +108,7 @@ public class ContractRunner implements ContractRunnable {
     }
 
     private void runContracts(String contractNameOrDirectory, boolean skipTests, boolean skipPostConditions) {
-        String absolutePath = System.getenv("RESOURCES_PATH").concat("/contracts/")
+        String absolutePath = System.getenv(Constant.RESOURCES_PATH).concat("/contracts/")
                 .concat(contractNameOrDirectory);
         if (!(new File(absolutePath)).isDirectory()) {
             controller.runContract(contractNameOrDirectory, skipTests, skipPostConditions);
@@ -117,7 +117,7 @@ public class ContractRunner implements ContractRunnable {
             if (contractNames != null && contractNames.length != 0) {
                 runMultipleContracts(contractNames, skipTests, skipPostConditions, contractNameOrDirectory);
             } else {
-                logger.error("There are no contract files in the directory: ".concat(absolutePath));
+                logger.error("There are no contract files in the directory: {}", absolutePath);
             }
         }
     }
@@ -136,29 +136,29 @@ public class ContractRunner implements ContractRunnable {
     }
 
     private <T> void runTestng(List<T> suites) {
-        if (suites != null && suites.size() != 0) {
-            PrintStream printStream = IoBuilder.forLogger(LogManager.getRootLogger())
+        if (suites != null && !suites.isEmpty()) {
+            var printStream = IoBuilder.forLogger(LogManager.getRootLogger())
                     .setLevel(Level.DEBUG).buildPrintStream();
-            RestAssuredConfig restAssuredConfig = RestAssuredConfig.config()
+            var restAssuredConfig = RestAssuredConfig.config()
                     .logConfig(new LogConfig().defaultStream(printStream).enablePrettyPrinting(true));
             if (SuiteConfig.getEnvs().containsKey("SSL_KEYSTORE_NAME")
                     && SuiteConfig.getEnvs().containsKey("SSL_KEYSTORE_PASSWORD")
                     && SuiteConfig.getEnvs().containsKey("SSL_TRUSTSTORE_NAME")
                     && SuiteConfig.getEnvs().containsKey("SSL_TRUSTSTORE_PASSWORD")) {
                 RestAssured.keyStore(
-                        System.getenv("RESOURCES_PATH").concat("/configs/")
+                        System.getenv(Constant.RESOURCES_PATH).concat("/configs/")
                                 .concat(SuiteConfig.getEnvs().get("SSL_KEYSTORE_NAME")),
                         SuiteConfig.getEnvs().get("SSL_KEYSTORE_PASSWORD"));
                 RestAssured.trustStore(
-                        System.getenv("RESOURCES_PATH").concat("/configs/")
+                        System.getenv(Constant.RESOURCES_PATH).concat("/configs/")
                                 .concat(SuiteConfig.getEnvs().get("SSL_TRUSTSTORE_NAME")),
                         SuiteConfig.getEnvs().get("SSL_TRUSTSTORE_PASSWORD"));
             }
             SuiteConfig.setRestAssuredConfig(restAssuredConfig);
             if (!Boolean.parseBoolean(SuiteConfig.getEnvs().get("SKIP_AUTH")))
                 controller.setAuthenticationAttributes(SuiteConfig.getEnvs().get("AUTH_TYPE"));
-            TestNG testng = new TestNG();
-            testng.setOutputDirectory(System.getenv("RESOURCES_PATH").concat("/test-outputs"));
+            var testng = new TestNG();
+            testng.setOutputDirectory(System.getenv(Constant.RESOURCES_PATH).concat("/test-outputs"));
             if (suites.get(0) instanceof String)
                 testng.setTestSuites((List<String>) suites);
             if (suites.get(0) instanceof XmlSuite)
@@ -169,7 +169,7 @@ public class ContractRunner implements ContractRunnable {
     }
 
     private XmlSuite getSuite(String[] contractNamesList, String configName) {
-        XmlSuite suite = new XmlSuite();
+        var suite = new XmlSuite();
         suite.setName(configName);
         suite.setVerbose(2);
         suite.setParallel(XmlSuite.ParallelMode.TESTS);
@@ -184,7 +184,7 @@ public class ContractRunner implements ContractRunnable {
     }
 
     private void addTestToSuite(XmlSuite suite, String contractName) {
-        XmlTest test = new XmlTest(suite);
+        var test = new XmlTest(suite);
         test.setName(contractName);
         Map<String, String> testngParams = new HashMap<>();
         testngParams.put("contractNameOrDirectory", contractName);
@@ -195,7 +195,7 @@ public class ContractRunner implements ContractRunnable {
     }
 
     private Map<String, String> getEnvsMap(String configDirectory) {
-        Dotenv dotenv = Dotenv.configure()
+        var dotenv = Dotenv.configure()
                 .directory(configDirectory.concat("/.env"))
                 .ignoreIfMalformed()
                 .ignoreIfMissing()

@@ -13,7 +13,7 @@ public abstract class PrimitiveAssertion {
                 .concat(" Type: ".concat(check.getType()))
                 .concat(" JsonPath: ").concat(check.getPath());
 
-        JsonPath parsedResponse = response.body().jsonPath();
+        var parsedResponse = response.body().jsonPath();
         String actualValue;
         String expectedValue;
         if (isHeaderCheck) {

@@ -16,6 +16,8 @@ public class SuiteConfig {
     private static String[] afterSuiteContracts;
     private static String dataProvider;
 
+    private SuiteConfig(){}
+
     public static RestAssuredConfig getRestAssuredConfig() {
         return restAssuredConfig;
     }
@@ -85,6 +87,12 @@ public class SuiteConfig {
     public static void initializeSuiteEnvs() {
         SuiteConfig.suiteEnvs = new HashMap<>();
         SuiteConfig.suiteEnvs.putAll(mainEnvs);
+    }
+
+    public static void initializeConfigs(){
+        beforeSuiteContracts = new String[]{};
+        beforeSuitePreContracts = new String[]{};
+        afterSuiteContracts = new String[]{};
     }
 
     public static void initializeTestEnvs() {

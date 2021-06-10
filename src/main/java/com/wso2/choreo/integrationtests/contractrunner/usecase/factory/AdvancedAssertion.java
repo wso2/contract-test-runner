@@ -7,10 +7,7 @@ public abstract class AdvancedAssertion {
     protected boolean isJsonObject(String path, JsonPath contractJsonPath) {
         try {
             contractJsonPath.setRootPath("response.body");
-            if (contractJsonPath.getMap(path, String.class, String.class) != null) {
-                return true;
-            }
-            return true;
+            return (contractJsonPath.getMap(path, String.class, String.class) != null);
         } catch (Exception ignored) {
             return false;
         } finally {

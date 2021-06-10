@@ -2,6 +2,7 @@ package com.wso2.choreo.integrationtests.contractrunner.controller;
 
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.spi.json.GsonJsonProvider;
+import com.wso2.choreo.integrationtests.contractrunner.configuration.Constant;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.EnvLevel;
 import com.wso2.choreo.integrationtests.contractrunner.configuration.SuiteConfig;
 import com.wso2.choreo.integrationtests.contractrunner.domain.entity.CustomEnv;
@@ -26,7 +27,7 @@ public class ContractController {
     private final FileRepository fileRepository = new FileRepositoryImpl();
 
     public String[] getJsonFilesInDirectory(String directory) {
-        File configDirectory = new File(directory);
+        var configDirectory = new File(directory);
         String[] fileNames = configDirectory.list((f, name) -> name.endsWith(".json"));
         assert fileNames != null;
         Arrays.sort(fileNames, String::compareTo);
@@ -38,44 +39,52 @@ public class ContractController {
     }
 
     public void runContract(String contractName, boolean skipTests, boolean skipPostConditions) {
-        String baseUrl = SuiteConfig.getEnvs().get("BASE_URL");
-        StrSubstitutor sub = new StrSubstitutor(SuiteConfig.getEnvs());
-        String jsonStringWithEnvs = sub.replace(
-                fileRepository.getFileContent(System.getenv("RESOURCES_PATH")
+        String baseUrl = SuiteConfig.getEnvs().get(Constant.BASE_URL);
+        var sub = new StrSubstitutor(SuiteConfig.getEnvs());
+        var jsonStringWithEnvs = sub.replace(
+                fileRepository.getFileContent(System.getenv(Constant.RESOURCES_PATH)
                         .concat("/contracts/".concat(contractName))));
-        JsonPath contractJsonPath = JsonPath.from(jsonStringWithEnvs);
+        var contractJsonPath = JsonPath.from(jsonStringWithEnvs);
 
-        Response response = networkRepository.getResponse(contractJsonPath,
+        var response = networkRepository.getResponse(contractJsonPath,
                 baseUrl.concat(contractJsonPath.getString("request.url")),
                 SuiteConfig.getRestAssuredConfig());
 
-        if (!skipTests)
-            runAllChecks(contractName, response, contractJsonPath);
-        if (!skipPostConditions)
-            runPostContractConditions(response, contractJsonPath);
+        if (!skipTests) runAllChecks(contractName, response, contractJsonPath);
+        if (!skipPostConditions) runPostContractConditions(response, contractJsonPath);
     }
 
     public void setSuiteConfigs(String configName) {
         SuiteConfig.initializeSuiteEnvs();
+        SuiteConfig.initializeConfigs();
         if (configName != null) {
-            JsonPath configJsonPath = getJsonPathFromFile(System
-                    .getenv("RESOURCES_PATH").concat("/configs/".concat(configName)));
-            if (configJsonPath.getMap("envs") != null)
+            var configJsonPath = getJsonPathFromFile(System
+                    .getenv(Constant.RESOURCES_PATH).concat("/configs/".concat(configName)));
+            if (configJsonPath.getMap("envs") != null) {
                 SuiteConfig.putEnvs(configJsonPath.getMap("envs"), EnvLevel.SUITE);
-            SuiteConfig.setBeforeSuitePreContracts(configJsonPath
-                    .getList("beforeSuiteConfigs.preContracts").toArray(new String[0]));
-            SuiteConfig.setBeforeSuiteContracts(configJsonPath
-                    .getList("beforeSuiteConfigs.contracts").toArray(new String[0]));
-            SuiteConfig.setAfterSuiteContracts(configJsonPath
-                    .getList("afterSuiteConfigs.contracts").toArray(new String[0]));
-            SuiteConfig.setDataProvider(null);
-
+            }
+            setBeforeAndAfterSuiteContracts(configJsonPath);
             if (configJsonPath.get("dataProvider") != null) {
                 Configuration conf = Configuration.builder().jsonProvider(new GsonJsonProvider()).build();
-                Object objectDataProvider = com.jayway.jsonpath.JsonPath.using(conf).parse(configJsonPath.prettify())
+                var objectDataProvider = com.jayway.jsonpath.JsonPath.using(conf).parse(configJsonPath.prettify())
                         .read("$.dataProvider");
-                SuiteConfig.setDataProvider(objectDataProvider.toString());
+                SuiteConfig.putEnv(Constant.SUITE_DATA_PROVIDER, objectDataProvider.toString(), EnvLevel.SUITE);
             }
+        }
+    }
+
+    private void setBeforeAndAfterSuiteContracts(JsonPath configJsonPath) {
+        if (configJsonPath.get("beforeSuiteConfigs.preContracts") != null) {
+            SuiteConfig.setBeforeSuitePreContracts(configJsonPath
+                    .getList("beforeSuiteConfigs.preContracts").toArray(new String[0]));
+        }
+        if (configJsonPath.get("beforeSuiteConfigs.contracts") != null) {
+            SuiteConfig.setBeforeSuiteContracts(configJsonPath
+                    .getList("beforeSuiteConfigs.contracts").toArray(new String[0]));
+        }
+        if (configJsonPath.get("afterSuiteConfigs.contracts") != null) {
+            SuiteConfig.setAfterSuiteContracts(configJsonPath
+                    .getList("afterSuiteConfigs.contracts").toArray(new String[0]));
         }
     }
 
@@ -93,7 +102,7 @@ public class ContractController {
         assertStatusCodeUseCase.execute();
 
         if (contractJsonPath.get("assertions") == null) {
-            logger.info("No assertions in this contract: ".concat(contractJsonPath.getString("name")));
+            logger.info("No assertions in this contract: {}", contractJsonPath.getString("name"));
             return;
         }
 
@@ -131,13 +140,12 @@ public class ContractController {
             List<CustomEnv> customEnvs = contractJsonPath
                     .getList(jsonPathStr, CustomEnv.class);
             for (CustomEnv env : customEnvs) {
-                JsonPath responsePath = JsonPath.from(response.asInputStream());
+                var responsePath = JsonPath.from(response.asInputStream());
                 Configuration conf = Configuration.builder().jsonProvider(new GsonJsonProvider()).build();
-                Object objectEnv = com.jayway.jsonpath.JsonPath.using(conf).parse(responsePath.prettify())
+                var objectEnv = com.jayway.jsonpath.JsonPath.using(conf).parse(responsePath.prettify())
                         .read((env.getPath().equals("")) ? "$" : "$.".concat(env.getPath()));
                 SuiteConfig.putEnv(env.getKey(), removeQuotes(objectEnv.toString()), level);
-                logger.debug("SETTING ".concat(level.toString()).concat(" ENV: ").concat(env.getKey()).concat(": ")
-                        .concat(objectEnv.toString()));
+                logger.debug("SETTING {} ENV: {} = {}", level, env.getKey(), objectEnv);
             }
         }
     }
