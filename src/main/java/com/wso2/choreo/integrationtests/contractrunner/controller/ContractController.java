@@ -109,6 +109,20 @@ public class ContractController {
         if (contractJsonPath.get("postConditions") != null) {
             setPostContractEnvs(response, contractJsonPath, "postConditions.setEnvs", EnvLevel.SUITE);
             setPostContractEnvs(response, contractJsonPath, "postConditions.setGlobalEnvs", EnvLevel.GLOBAL);
+            waitBeforeNext(contractJsonPath);
+        }
+    }
+
+    private void waitBeforeNext(JsonPath contractJsonPath){
+        if (contractJsonPath.get("postConditions.waitTime") != null) {
+            var waitTime = contractJsonPath.getString("postConditions.waitTime");
+            logger.debug("Sleeping for {} seconds", waitTime);
+            try {
+                Thread.sleep(Integer.parseInt(waitTime) * 1000L);
+            } catch (InterruptedException e) {
+                logger.warn("Thread was interrupted while sleeping ", e);
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
