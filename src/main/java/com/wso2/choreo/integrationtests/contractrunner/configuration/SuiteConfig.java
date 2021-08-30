@@ -14,7 +14,6 @@ public class SuiteConfig {
     private static String[] beforeSuiteContracts;
     private static String[] beforeSuitePreContracts;
     private static String[] afterSuiteContracts;
-    private static String dataProvider;
 
     private SuiteConfig(){}
 
@@ -99,13 +98,5 @@ public class SuiteConfig {
         SuiteConfig.testEnvs = new HashMap<>();
         SuiteConfig.testEnvs.putAll(mainEnvs);
         SuiteConfig.testEnvs.putAll(suiteEnvs);
-    }
-
-    public static String getDataProvider() {
-        return dataProvider;
-    }
-
-    public static void setDataProvider(String dataProvider) {
-        SuiteConfig.dataProvider = dataProvider;
     }
 }

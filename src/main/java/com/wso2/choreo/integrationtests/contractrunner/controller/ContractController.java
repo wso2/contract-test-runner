@@ -123,8 +123,8 @@ public class ContractController {
     }
 
     private void waitBeforeNext(JsonPath contractJsonPath){
-        if (contractJsonPath.get("postConditions.waitTime") != null) {
-            var waitTime = contractJsonPath.getString("postConditions.waitTime");
+        if (contractJsonPath.get("postConditions.waitTimeSeconds") != null) {
+            var waitTime = contractJsonPath.getString("postConditions.waitTimeSeconds");
             logger.debug("Sleeping for {} seconds", waitTime);
             try {
                 Thread.sleep(Integer.parseInt(waitTime) * 1000L);
