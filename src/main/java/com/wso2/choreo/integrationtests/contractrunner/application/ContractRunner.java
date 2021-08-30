@@ -83,7 +83,7 @@ public class ContractRunner implements ContractRunnable {
 
     public void runTest(String contractNameOrDirectory, boolean skipTests, boolean skipPostConditions) {
         if (SuiteConfig.getEnvs().containsKey(Constant.SUITE_DATA_PROVIDER)) {
-            var dataProviderPath = JsonPath.from(SuiteConfig.getDataProvider());
+            var dataProviderPath = JsonPath.from(SuiteConfig.getEnvs().get(Constant.SUITE_DATA_PROVIDER));
             var arrayPath = JsonPath.from(SuiteConfig.getEnvs().get(dataProviderPath.getString("array")));
             List<String> dataList;
             if (dataProviderPath.get("filterPath") != null) {
